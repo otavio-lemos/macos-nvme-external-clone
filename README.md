@@ -1,11 +1,23 @@
-# Boot de macOS em NVMe Externo entre Macs Apple Silicon (M3 Pro → M4 Pro)
+# Utilizando um NVMe externo em mais de 1 macOS
 
-Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 26B131**) de um Mac Apple Silicon (**M3 Pro**) para um **SSD NVMe externo** e inicializá-lo em outro Mac Apple Silicon (**M4 Pro**) mantendo:
+Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 26B131**) de um Mac Apple Silicon para um **SSD NVMe externo** e alternar continuamente o mesmo disco inicializável entre dois Macs diferentes — ficando horas conectado e em uso em um Mac e horas no outro — mantendo:
 
-- **SSD interno intacto** (dual-boot independente no NVMe externo)
+- **SSD interno de ambos os Macs intacto** (boot independente no NVMe externo)
 - **System Integrity Protection (`SIP`) ativado** (`csrutil status: enabled`)
 - **Siri AI / Apple Intelligence** funcionando no boot externo
 - **Espelhamento do iPhone (`iPhone Mirroring`)** funcionando normalmente
+
+---
+
+## Hardware e Cenário de Uso
+
+| Componente | Especificação | Observação |
+|---|---|---|
+| **Mac 1 (Origem do clone)** | MacBook Pro **M3 Pro** (`18 GB` RAM) | Instalação original atualizada para o macOS 27.2.1 (`26B131`) usada como fonte do clone |
+| **Mac 2 (Destino / Alternância)** | MacBook Pro **M4 Pro** (`48 GB` RAM) | Segunda máquina que inicializa pelo mesmo NVMe externo |
+| **Case Thunderbolt / USB4** | **ACASIS TBU405 Air** (`TBU405AIR`) | Modo `Thunderbolt 3`, `40 Gb/s`, Firmware `67.1` (Link Controller `1.45.0`) |
+| **SSD NVMe** | **Hiksemi Future Lite 1024G** (`HS-SSD-FUTURE Lite 1024G`) | `1 TB` (`1,02 TB`), NVMe `2.00`, Link PCIe `x4` (`8.0 GT/s`), Firmware `HS26795` |
+| **Dinâmica de uso** | **Multi-Mac diário** | O mesmo NVMe externo fica horas rodando em um Mac (M3 Pro) e horas rodando no outro (M4 Pro) |
 
 ---
 
