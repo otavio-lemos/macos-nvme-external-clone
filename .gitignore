@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+.DS_STORE
+.AppleDouble
+.LSOverride
+._*
+
+# Ignorar arquivos e pastas ocultos (exceto .gitignore)
+.*
+!.gitignore
