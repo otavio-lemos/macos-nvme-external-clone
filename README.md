@@ -4,8 +4,8 @@ Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 2
 
 - **SSD interno de ambos os Macs intacto** (boot independente no NVMe externo)
 - **System Integrity Protection (`SIP`) ativado** (`csrutil status: enabled`)
-- **Siri AI / Apple Intelligence** funcionando no boot externo
-- **Espelhamento do iPhone (`iPhone Mirroring`)** funcionando normalmente
+- **Siri AI / Apple Intelligence** funcionando em todos os cenários
+- **Espelhamento do iPhone (`iPhone Mirroring`)** funcionando em todos os cenários
 
 ---
 
@@ -117,7 +117,7 @@ No Apple Silicon, copiar o Volume Group APFS não basta para o disco aparecer e 
 
 ---
 
-## Etapa 3 — Desbloqueando Siri AI / Apple Intelligence no Boot Externo
+## Etapa 3 — Desbloqueando Siri AI / Apple Intelligence
 
 ### 3.1 Causa raiz
 O daemon `/usr/libexec/eligibilityd` chama `+[ExternalBootDriveInput queryHasExternalBootDrive]`, lê `external-boot = <01000000>` em `IODeviceTree:/chosen` e marca o sistema como inelegível (`OS_ELIGIBILITY_INPUT_EXTERNAL_BOOT_DRIVE = 2` e `os_eligibility_answer_t = 2`) em dois arquivos XML:
@@ -146,7 +146,6 @@ Inspecionando a imagem real do Modo Recovery (`arm64eBaseSystem.dmg`):
    ```sh
    sh "/Volumes/Macintosh HD - Data/Users/<seu-usuario>/ml/macos-nvme-external-clone/fix_siri.sh"
    ```
-   *(No ambiente atual, o caminho é `sh "/Volumes/Macintosh HD - Data/Users/otaviolemos/ml/macos-nvme-external-clone/fix_siri.sh"`.)*
 4. Reinicie de volta para o macOS normal no NVMe externo.
 
 ### 3.4 Comandos manuais equivalentes (o que o `fix_siri.sh` executa no Recovery)
