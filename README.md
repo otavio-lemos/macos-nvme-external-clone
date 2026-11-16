@@ -1,6 +1,6 @@
 # Utilizando um NVMe externo em mais de 1 macOS
 
-Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 26B131**) de um Mac Apple Silicon para um **SSD NVMe externo** e alternar continuamente o mesmo disco inicializável entre dois Macs diferentes — ficando horas conectado e em uso em um Mac e horas no outro — mantendo:
+Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 26B131**) de um Mac Apple Silicon para um **SSD NVMe externo**:
 
 - **SSD interno de ambos os Macs intacto** (boot independente no NVMe externo)
 - **System Integrity Protection (`SIP`) ativado** (`csrutil status: enabled`)
