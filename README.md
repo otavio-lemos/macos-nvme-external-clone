@@ -150,16 +150,38 @@ Inspecionando a imagem real do Modo Recovery (`arm64eBaseSystem.dmg`):
 - No Modo Recovery, o runtime não bloqueia a edição dos arquivos dentro de `/Volumes/Macintosh HD - Data`, permitindo aplicar o patch **sem desativar o SIP** (`csrutil disable` não é necessário) e travar os arquivos com `chflags uchg`.
 
 ### 3.3 Como aplicar com o script [`fix_siri.sh`](./fix_siri.sh)
-1. Reinicie o Mac para o **Modo Recovery** (mantenha o botão Power pressionado ao ligar > **Opções** > abra **Utilitários > Terminal**).
-2. Caso o volume de dados esteja bloqueado por FileVault e ainda não esteja em `/Volumes/Macintosh HD - Data`, desbloqueie/monte-o pelo Utilitário de Disco no Recovery ou via `diskutil apfs unlockVolume`.
-3. Execute o script:
+
+> **Obrigatório no Modo Recovery:** ao entrar no Recovery, o volume de dados do NVMe externo **não vem montado automaticamente**. Tanto o `fix_siri.sh` quanto os arquivos `/private/var/db/.../eligibility.plist` ficam dentro dele — portanto, **é obrigatório montar `Macintosh HD - Data` antes** de executar qualquer comando.
+
+1. Reinicie o Mac para o **Modo Recovery** (mantenha o botão Power pressionado ao ligar > **Opções**).
+2. **Monte o volume `Macintosh HD - Data` do NVMe externo** (escolha uma das duas formas):
+   - **Pelo Utilitário de Disco (interface):** abra **Utilitário de Disco**, selecione o volume **`Macintosh HD - Data`** do NVMe externo, clique em **Montar** (informe a senha se solicitada), feche o Utilitário de Disco e depois abra **Utilitários > Terminal**.
+   - **Ou direto pelo Terminal do Recovery:** abra **Utilitários > Terminal** e rode:
+     ```sh
+     # 1. Identifique a partição "Macintosh HD - Data" do NVMe externo (ex.: disk5s2)
+     diskutil list
+
+     # 2. Monte o volume de dados externo:
+     diskutil mount /dev/disk5s2
+     # Se estiver com FileVault ativado (criptografado), use unlockVolume no lugar:
+     diskutil apfs unlockVolume /dev/disk5s2
+
+     # 3. Confirme que foi montado em /Volumes/Macintosh HD - Data
+     ls -la "/Volumes/Macintosh HD - Data"
+     ```
+3. Com o volume montado, execute o script:
    ```sh
    sh "/Volumes/Macintosh HD - Data/Users/<seu-usuario>/ml/macos-nvme-external-clone/fix_siri.sh"
    ```
 4. Reinicie de volta para o macOS normal no NVMe externo.
 
-### 3.4 Comandos manuais equivalentes (o que o `fix_siri.sh` executa no Recovery)
+### 3.4 Comandos manuais equivalentes (o que fazer no Terminal do Recovery)
 ```sh
+# 1. Monte o volume de dados externo antes (ajuste disk5s2 conforme o diskutil list):
+diskutil mount /dev/disk5s2
+# (Se tiver FileVault: diskutil apfs unlockVolume /dev/disk5s2)
+
+# 2. Defina os caminhos dentro do volume montado e aplique o patch:
 TARGET="/Volumes/Macintosh HD - Data"
 P1="$TARGET/private/var/db/eligibilityd/eligibility.plist"
 P2="$TARGET/private/var/db/os_eligibility/eligibility.plist"
