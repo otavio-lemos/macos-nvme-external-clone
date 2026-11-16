@@ -80,40 +80,50 @@ sudo asr restore --source "<volume_origem>" --target "/Volumes/Macintosh HD" --e
 
 ## Etapa 2 — Habilitando o NVMe Externo como Disco Inicializável (`LocalPolicy` / `Preboot`)
 
-No Apple Silicon, copiar o Volume Group APFS não basta para o disco aparecer e inicializar em outra máquina. Existem **duas camadas** distintas:
+> **Obrigatório nos DOIS Macs (M3 Pro e M4 Pro) após o clone:** o **Restaurar** do Utilitário de Disco copia e monta o Volume Group APFS no NVMe externo, mas **não** registra a assinatura criptográfica (`LocalPolicy`) no container interno `iSCPreboot` de nenhum Mac. Sem essa assinatura registrada internamente pelo **Secure Enclave** de cada máquina, o NVMe externo **não é reconhecido como disco inicializável** (nem em *Ajustes do Sistema > Geral > Disco de Inicialização* nem nas *Opções de Inicialização*).
+
+Existem **duas camadas** envolvidas no reconhecimento do disco:
 
 1. **`iSCPreboot` interno de cada Mac (`/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/`):**
-   Fica no container interno `Apple_APFS_ISC` (`disk0s1`) do próprio Mac. Contém os arquivos `*.img4` e `*.recovery.img4` assinados pelo **Secure Enclave** daquela máquina específica (vinculados ao `CHIP`, `ECID`, `vuid` e `nsih`). Por ficar armazenada no `Apple_APFS_ISC` interno, a autorização no M4 Pro não sobrescreve a política do M3 Pro.
+   Fica no container interno `Apple_APFS_ISC` (`disk0s1`) do próprio Mac. Contém os arquivos `*.img4` e `*.recovery.img4` assinados pelo **Secure Enclave** daquela máquina específica (vinculados ao `CHIP`, `ECID`, `vuid` e `nsih`). Como essa assinatura é interna de cada hardware, ela **precisa ser registrada uma vez no M3 Pro e uma vez no M4 Pro** — e gravar em um não sobrescreve o outro.
 2. **`Preboot` e `Recovery` do próprio NVMe externo (`disk5s3` e `disk5s4`):**
    Guardam os manifests de boot e correlação de usuários em `/System/Volumes/Preboot/<VolumeGroupUUID>/boot/<nsih>` e `/Volumes/Recovery/<VolumeGroupUUID>/boot/`.
 
-### Passos e comandos para habilitar e assinar o boot
+### Passos e comandos para registrar a assinatura interna e habilitar o boot (executar em cada Mac)
 
-1. **Liste os Volume Groups para identificar o dispositivo `System` e o UUID do grupo:**
+1. **Identifique o dispositivo `System` (ex.: `disk5s1`) e o `Volume Group UUID` (ex.: `973F8359-F648-49B3-9811-7E9DC38F4A9F`) do NVMe externo:**
    ```sh
    diskutil apfs listVolumeGroups
    ```
 
 2. **Atualize o `Preboot` do volume externo clonado (sincroniza usuários APFS/FileVault e Open Directory):**
-   *(Substitua `disk5s1` pelo identificador do volume `System` do NVMe externo retornado no passo anterior)*
+   *(Substitua `disk5s1` pelo identificador retornado no passo 1)*
    ```sh
    sudo diskutil apfs updatePreboot /dev/disk5s1
    ```
 
-3. **Autorize o NVMe externo e gere a `LocalPolicy` assinada pelo Secure Enclave do Mac de destino:**
-   - **Pela interface (recomendado):** abra **Ajustes do Sistema > Geral > Disco de Inicialização** (ou **Disco de Inicialização** no Modo Recovery), selecione o volume externo, clique em **Reiniciar** e digite a senha do usuário administrador daquele volume. Isso assina a `LocalPolicy` em `/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/` mantendo o **SIP ativado**.
-   - **Via Terminal (para definir o volume externo montado como disco de inicialização):**
-     ```sh
-     sudo bless --mount "/Volumes/Macintosh HD" --setBoot
-     ```
-   *(Se o Apple Silicon exigir confirmação de proprietário para assinar uma nova `LocalPolicy` após clonar entre máquinas diferentes, entre nas **Opções de Inicialização** mantendo o botão Power pressionado ao ligar e conclua a autorização em **Disco de Inicialização** / **Utilitário de Segurança de Inicialização**.)*
+3. **Gere e assine no Secure Enclave a `LocalPolicy` (`Full Security`) dentro do `iSCPreboot` interno deste Mac:**
+   ```sh
+   sudo bputil -f -v <VolumeGroupUUID>
+   ```
+   *(Solicita usuário administrador e senha do volume para assinar e gravar `*.img4` e `*.recovery.img4` em `/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/`, mantendo o **SIP ativado**.)*
 
-4. **Verifique se a política e o `Preboot` foram gerados:**
+4. **Abençoe (`bless`) o volume externo para registrá-lo como disco inicializável:**
+   ```sh
+   sudo bless --mount "/Volumes/Macintosh HD" --setBoot
+   ```
+   *(Se precisar recriar/selar o snapshot de boot: `sudo bless --mount "/Volumes/Macintosh HD/System/Library/CoreServices" --setBoot --create-snapshot`.)*
+
+5. **Verifique se a assinatura interna foi registrada e se o disco passou a ser reconhecido:**
    ```sh
    ls -la /System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/
    ls -la /System/Volumes/Preboot/<VolumeGroupUUID>/boot/
-   sudo bputil -d
+   sudo bputil -d -v <VolumeGroupUUID>
    ```
+   Confirme também em **Ajustes do Sistema > Geral > Disco de Inicialização** (ou nas **Opções de Inicialização** segurando o botão Power ao ligar). *(Se o macOS solicitar confirmação de proprietário para assinar a nova `LocalPolicy` na interface, autentique com o usuário administrador em Disco de Inicialização / Modo Recovery.)*
+
+6. **Repita os passos 1 a 5 no segundo Mac:**
+   Conecte o NVMe externo no outro Mac (M4 Pro / M3 Pro) inicializado pelo SSD interno e execute os mesmos passos para que **ambos** possuam a assinatura `LocalPolicy` desse `Volume Group UUID` gravada no próprio `iSCPreboot` interno.
 
 ---
 
@@ -242,6 +252,6 @@ Em seguida, abra o **Espelhamento do iPhone** (`open -a "iPhone Mirroring"`) e c
 
 | Recurso | Comportamento ao plugar no M3 Pro (ou voltar ao M4 Pro) | Ação necessária |
 |---|---|---|
-| **Boot do macOS** | Funciona nos dois Macs | Cada Mac usa sua `LocalPolicy` assinada no próprio `iSCPreboot` interno (`/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/`). Se o outro Mac ainda não tiver autorizado esse Volume Group (ou após atualização de sistema), faça a Etapa 2 uma vez. |
+| **Boot do macOS** | Funciona livremente nos dois Macs após a Etapa 2 | Após o clone, a **Etapa 2 deve ser executada uma vez nos DOIS Macs (M3 Pro e M4 Pro)** para registrar a assinatura `LocalPolicy` no `iSCPreboot` interno (`/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/`) de cada máquina. Depois que ambos possuem a assinatura gravada, o NVMe externo inicializa diretamente nos dois (caso aplique uma atualização de sistema em um Mac, pode ser necessário revalidar no outro). |
 | **Siri AI / Apple Intelligence** | Funciona automaticamente nos dois Macs | Os dois `eligibility.plist` ficam no volume compartilhado `Macintosh HD - Data` travados com `chflags uchg`. |
 | **Espelhamento do iPhone** | Pode exigir novo pareamento ao trocar de Mac | O `replicatord.sql` guarda o vínculo com o hardware/Secure Enclave do último Mac usado. Se ficar preso tentando conectar ao trocar de máquina, rode `sh "./fix_iphone_mirroring.sh"`. |
