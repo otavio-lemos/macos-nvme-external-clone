@@ -91,30 +91,39 @@ Existem **duas camadas** envolvidas no reconhecimento do disco:
 
 ### Passos e comandos para registrar a assinatura interna e habilitar o boot (executar em cada Mac)
 
-1. **Identifique o dispositivo `System` (ex.: `disk5s1`) e o `Volume Group UUID` (ex.: `973F8359-F648-49B3-9811-7E9DC38F4A9F`) do NVMe externo:**
+1. **Identifique na seção `external` o dispositivo `System` (`Macintosh HD`, ex.: `disk5s1`) e o `Volume Group UUID` (ex.: `973F8359-F648-49B3-9811-7E9DC38F4A9F`) do NVMe externo:**
    ```sh
+   diskutil list external
    diskutil apfs listVolumeGroups
    ```
 
-2. **Atualize o `Preboot` do volume externo clonado (sincroniza usuários APFS/FileVault e Open Directory):**
+2. **Monte o volume `Macintosh HD` do disco externo (se ainda não estiver montado):**
+   ```sh
+   sudo diskutil mount /dev/disk5s1
+   diskutil info /dev/disk5s1 | grep "Mount Point"
+   ```
+   *(Se o SSD interno já estiver montado, confira o `Mount Point` exato retornado para o `Macintosh HD` do disco externo para não apontar o `bless` para o disco errado.)*
+
+3. **Atualize o `Preboot` do volume externo clonado (sincroniza usuários APFS/FileVault e Open Directory):**
    *(Substitua `disk5s1` pelo identificador retornado no passo 1)*
    ```sh
    sudo diskutil apfs updatePreboot /dev/disk5s1
    ```
 
-3. **Gere e assine no Secure Enclave a `LocalPolicy` (`Full Security`) dentro do `iSCPreboot` interno deste Mac:**
+4. **Gere e assine no Secure Enclave a `LocalPolicy` (`Full Security`) dentro do `iSCPreboot` interno deste Mac:**
    ```sh
    sudo bputil -f -v <VolumeGroupUUID>
    ```
    *(Solicita usuário administrador e senha do volume para assinar e gravar `*.img4` e `*.recovery.img4` em `/System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/`, mantendo o **SIP ativado**.)*
 
-4. **Abençoe (`bless`) o volume externo para registrá-lo como disco inicializável:**
+5. **Abençoe (`bless`) o `Macintosh HD` do disco externo para registrá-lo como disco inicializável:**
+   *(Use o `Mount Point` do `Macintosh HD` externo obtido no passo 2)*
    ```sh
-   sudo bless --mount "/Volumes/Macintosh HD" --setBoot
+   sudo bless --mount "<Mount Point do Macintosh HD externo>" --setBoot
    ```
-   *(Se precisar recriar/selar o snapshot de boot: `sudo bless --mount "/Volumes/Macintosh HD/System/Library/CoreServices" --setBoot --create-snapshot`.)*
+   *(Se precisar recriar/selar o snapshot de boot: `sudo bless --mount "<Mount Point do Macintosh HD externo>/System/Library/CoreServices" --setBoot --create-snapshot`.)*
 
-5. **Verifique se a assinatura interna foi registrada e se o disco passou a ser reconhecido:**
+6. **Verifique se a assinatura interna foi registrada e se o disco passou a ser reconhecido:**
    ```sh
    ls -la /System/Volumes/iSCPreboot/<VolumeGroupUUID>/LocalPolicy/
    ls -la /System/Volumes/Preboot/<VolumeGroupUUID>/boot/
@@ -122,7 +131,7 @@ Existem **duas camadas** envolvidas no reconhecimento do disco:
    ```
    Confirme também em **Ajustes do Sistema > Geral > Disco de Inicialização** (ou nas **Opções de Inicialização** segurando o botão Power ao ligar). *(Se o macOS solicitar confirmação de proprietário para assinar a nova `LocalPolicy` na interface, autentique com o usuário administrador em Disco de Inicialização / Modo Recovery.)*
 
-6. **Repita os passos 1 a 5 no segundo Mac:**
+7. **Repita os passos 1 a 6 no segundo Mac:**
    Conecte o NVMe externo no outro Mac (M4 Pro / M3 Pro) inicializado pelo SSD interno e execute os mesmos passos para que **ambos** possuam a assinatura `LocalPolicy` desse `Volume Group UUID` gravada no próprio `iSCPreboot` interno.
 
 ---
@@ -151,25 +160,27 @@ Inspecionando a imagem real do Modo Recovery (`arm64eBaseSystem.dmg`):
 
 ### 3.3 Como aplicar com o script [`fix_siri.sh`](./fix_siri.sh)
 
-> **Obrigatório no Modo Recovery:** ao entrar no Recovery, o volume de dados do NVMe externo **não vem montado automaticamente**. Tanto o `fix_siri.sh` quanto os arquivos `/private/var/db/.../eligibility.plist` ficam dentro dele — portanto, **é obrigatório montar `Macintosh HD - Data` antes** de executar qualquer comando.
+> **Obrigatório no Modo Recovery:** ao entrar no Recovery, os volumes do NVMe externo **não vêm montados automaticamente**. Monte **`Macintosh HD` e `Macintosh HD - Data` do DISCO EXTERNO** (atenção para não confundir com o `Macintosh HD` do disco interno) antes de executar qualquer comando.
 
 1. Reinicie o Mac para o **Modo Recovery** (mantenha o botão Power pressionado ao ligar > **Opções**).
-2. **Monte o volume `Macintosh HD - Data` do NVMe externo** (escolha uma das duas formas):
-   - **Pelo Utilitário de Disco (interface):** abra **Utilitário de Disco**, selecione o volume **`Macintosh HD - Data`** do NVMe externo, clique em **Montar** (informe a senha se solicitada), feche o Utilitário de Disco e depois abra **Utilitários > Terminal**.
+2. **Monte o `Macintosh HD` e o `Macintosh HD - Data` do DISCO EXTERNO** (escolha uma das duas formas):
+   - **Pelo Utilitário de Disco (interface):** abra **Utilitário de Disco**, vá na seção **Externo**, selecione **`Macintosh HD`** e clique em **Montar**, depois selecione **`Macintosh HD - Data`** e clique em **Montar** (informe a senha se solicitada). Feche o Utilitário de Disco e abra **Utilitários > Terminal**.
    - **Ou direto pelo Terminal do Recovery:** abra **Utilitários > Terminal** e rode:
      ```sh
-     # 1. Identifique a partição "Macintosh HD - Data" do NVMe externo (ex.: disk5s2)
-     diskutil list
+     # 1. Liste os discos externos e identifique "Macintosh HD" (ex.: disk5s1) e "Macintosh HD - Data" (ex.: disk5s2):
+     diskutil list external
 
-     # 2. Monte o volume de dados externo:
+     # 2. Monte o "Macintosh HD" e o "Macintosh HD - Data" do DISCO EXTERNO:
+     diskutil mount /dev/disk5s1
      diskutil mount /dev/disk5s2
      # Se estiver com FileVault ativado (criptografado), use unlockVolume no lugar:
+     diskutil apfs unlockVolume /dev/disk5s1
      diskutil apfs unlockVolume /dev/disk5s2
 
-     # 3. Confirme que foi montado em /Volumes/Macintosh HD - Data
+     # 3. Confirme os volumes externos montados em /Volumes:
      ls -la "/Volumes/Macintosh HD - Data"
      ```
-3. Com o volume montado, execute o script:
+3. Com o disco externo montado, execute o script:
    ```sh
    sh "/Volumes/Macintosh HD - Data/Users/<seu-usuario>/ml/macos-nvme-external-clone/fix_siri.sh"
    ```
@@ -177,9 +188,10 @@ Inspecionando a imagem real do Modo Recovery (`arm64eBaseSystem.dmg`):
 
 ### 3.4 Comandos manuais equivalentes (o que fazer no Terminal do Recovery)
 ```sh
-# 1. Monte o volume de dados externo antes (ajuste disk5s2 conforme o diskutil list):
+# 1. Monte "Macintosh HD" e "Macintosh HD - Data" do DISCO EXTERNO antes (confira com diskutil list external):
+diskutil mount /dev/disk5s1
 diskutil mount /dev/disk5s2
-# (Se tiver FileVault: diskutil apfs unlockVolume /dev/disk5s2)
+# (Se tiver FileVault: diskutil apfs unlockVolume /dev/disk5s1 && diskutil apfs unlockVolume /dev/disk5s2)
 
 # 2. Defina os caminhos dentro do volume montado e aplique o patch:
 TARGET="/Volumes/Macintosh HD - Data"
