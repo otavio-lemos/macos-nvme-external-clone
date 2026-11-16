@@ -1,4 +1,4 @@
-# Utilizando um NVMe externo em mais de 1 macOS
+# Utilizando um NVMe externo em dois macOS
 
 Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 26B131**) de um Mac Apple Silicon para um **SSD NVMe externo**:
 
