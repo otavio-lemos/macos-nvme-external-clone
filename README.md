@@ -11,13 +11,11 @@ Guia técnico e scripts para clonar o macOS (testado no **macOS 27.2.1 / Build 2
 
 ## Hardware e Cenário de Uso
 
-| Componente | Especificação | Observação |
-|---|---|---|
-| **Mac 1 (Origem do clone)** | MacBook Pro **M3 Pro** (`18 GB` RAM) | Instalação original atualizada para o macOS 27.2.1 (`26B131`) usada como fonte do clone |
-| **Mac 2 (Destino / Alternância)** | MacBook Pro **M4 Pro** (`48 GB` RAM) | Segunda máquina que inicializa pelo mesmo NVMe externo |
-| **Case Thunderbolt / USB4** | **ACASIS TBU405 Air** (`TBU405AIR`) | Modo `Thunderbolt 3`, `40 Gb/s`, Firmware `67.1` (Link Controller `1.45.0`) |
-| **SSD NVMe** | **Hiksemi Future Lite 1024G** (`HS-SSD-FUTURE Lite 1024G`) | `1 TB` (`1,02 TB`), NVMe `2.00`, Link PCIe `x4` (`8.0 GT/s`), Firmware `HS26795` |
-| **Dinâmica de uso** | **Multi-Mac diário** | O mesmo NVMe externo fica horas rodando em um Mac (M3 Pro) e horas rodando no outro (M4 Pro) |
+- **Origem do clone:** MacBook Pro M3 Pro (18 GB RAM)
+- **Segundo Mac:** MacBook Pro M4 Pro (48 GB RAM)
+- **Case externo:** ACASIS TBU405 Air (Thunderbolt / USB4 40 Gb/s)
+- **SSD NVMe:** Hiksemi Future Lite 1 TB (`HS-SSD-FUTURE Lite 1024G`)
+- **Uso:** O mesmo NVMe externo fica horas em um macOS e horas no outro.
 
 ---
 
